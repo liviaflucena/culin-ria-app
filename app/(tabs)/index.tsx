@@ -1,53 +1,56 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import React from 'react';
+import { Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import ParallaxScrollView from '@/components/ParallaxScrollView';
 
 export default function HomeScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: '#F1F1F1', dark: '#2D2D2D' }}
       headerImage={
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+          source={require('@/assets/images/comida2.png')}
+          style={styles.headerImage}
         />
-      }>
+      }
+    >
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
+        <ThemedText type="title">Culinária: A Arte de Nutrir o Mundo</ThemedText>
       </ThemedView>
+
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
+        <ThemedText type="subtitle">Culinária no Mundo</ThemedText>
         <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+          A culinária é um dos pilares da nossa cultura. Com ela, podemos experimentar novos sabores, explorar tradições e unir pessoas ao redor de uma boa refeição. Vamos conhecer mais sobre as receitas de diferentes culturas ao redor do mundo.
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
+
+      <ThemedView style={styles.imageCarouselContainer}>
+        <ThemedText type="subtitle">Receitas Populares</ThemedText>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <Image
+            source={require('@/assets/images/comida3.png')}
+            style={styles.carouselImage}
+          />
+          <Image
+            source={require('@/assets/images/comida4.png')}
+            style={styles.carouselImage}
+          />
+          <Image
+            source={require('@/assets/images/comida5.png')}
+            style={styles.carouselImage}
+          />
+        </ScrollView>
       </ThemedView>
+
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
+        <ThemedText type="subtitle">Dicas de Culinária</ThemedText>
         <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+          Dicas essenciais para melhorar a sua experiência culinária:
+          1. Aprenda a temperar bem os alimentos.
+          2. Experimente receitas de diferentes culturas.
+          3. Use ingredientes frescos sempre que possível.
         </ThemedText>
       </ThemedView>
     </ParallaxScrollView>
@@ -59,16 +62,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: 10,
+    paddingHorizontal: 16,
   },
   stepContainer: {
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  headerImage: {
+    height: '100%',
+    width: '100%',
+    resizeMode: 'cover',
+  },
+  imageCarouselContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  carouselImage: {
+    width: 250,
+    height: 150,
+    borderRadius: 8,
+    marginRight: 10,
   },
 });
