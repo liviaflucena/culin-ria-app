@@ -37,13 +37,6 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Receitas',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="addRecipe"
-        options={{
-          title: 'Adicionar',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
         }}
       />
