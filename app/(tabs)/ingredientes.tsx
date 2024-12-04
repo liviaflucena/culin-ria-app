@@ -17,40 +17,57 @@ import { ThemedView } from '@/components/ThemedView';
 export default function IngredientesScreen() {
   const [ingred, setIngred] = useState([
     {
+      id: 1,
       name: 'Leite animal',
       category: 'Laticínio.',
     },
     {
+      id: 2,
       name: 'Brócolis',
       category: 'Vegetais.',
     },
   ]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [newIngred, setNewIngred] = useState({ name: '', category: '' });
+  const [currentIngred, setCurrentIngred] = useState<any>(null);
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
 
   const toggleIngredDetails = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
+  
   };
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (ingred?: any) => {
+    setCurrentIngred(ingred || { id: null, name: '', ingredients: '' });
     setModalVisible(true);
   };
 
   const handleCloseModal = () => {
     setModalVisible(false);
-    setNewIngred({ name: '', category: ''});
+    setCurrentIngred(null);
   };
 
-  const handleSaveRecipe = () => {
-    if (newIngred.name && newIngred.category) {
-      setIngred([...ingred, newIngred]);
+  const handleSaveIngred = () => {
+    if (currentIngred.name && currentIngred.ingredients && currentIngred.steps) {
+      if (currentIngred.id) {
+        setIngred((prevIngred) =>
+          prevIngred.map((ingred) =>
+            ingred.id === currentIngred.id ? currentIngred : ingred
+          )
+        );
+      } else {
+        const newIngred = { ...currentIngred, id: Date.now() };
+        setIngred([...ingred, newIngred]);
+      }
       handleCloseModal();
     } else {
       alert('Preencha todos os campos.');
     }
+  };
+
+  const handleDeleteIngred = (id: number) => {
+    setIngred(ingred.filter((ingred) => ingred.id !== id));
   };
 
   const dynamicStyles = createStyles(isDarkMode);
@@ -68,7 +85,7 @@ export default function IngredientesScreen() {
       <ThemedView style={dynamicStyles.titleContainer}>
         <ThemedText type="title">Seus Ingredientes</ThemedText>
 
-        <TouchableOpacity style={dynamicStyles.addButton} onPress={handleOpenModal}>
+        <TouchableOpacity style={dynamicStyles.addButton} onPress={() => handleOpenModal()}>
           <Text style={dynamicStyles.addButtonText}>+ Adicionar alimentos</Text>
         </TouchableOpacity>
        
@@ -86,6 +103,21 @@ export default function IngredientesScreen() {
                 <ThemedText style={dynamicStyles.ingredSteps}>
                   Categoria: {ingred.category}
                 </ThemedText>
+                <View style={dynamicStyles.actionButtons}>
+                  <TouchableOpacity
+                    style={dynamicStyles.editButton}
+                    onPress={() => handleOpenModal(ingred)}
+                  >
+                    <Text style={dynamicStyles.buttonText}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={dynamicStyles.deleteButton}
+                    onPress={() => handleDeleteIngred(ingred.id)}
+                  >
+                    <Text style={dynamicStyles.buttonText}>Deletar</Text>
+                  </TouchableOpacity>
+                 
+                </View>
               </View>
             )}
           </ThemedView>
@@ -96,35 +128,38 @@ export default function IngredientesScreen() {
       <Modal visible={modalVisible} transparent={true} animationType="slide">
         <View style={dynamicStyles.modalOverlay}>
           <View style={dynamicStyles.modalContent}>
-            <Text style={dynamicStyles.modalTitle}>Adicionar Ingredientes</Text>
+            <Text style={dynamicStyles.modalTitle}> 
+              {currentIngred?.id ? 'Editar Ingrediente' : 'Adicionar Ingrediente'}</Text>
             <Text style={dynamicStyles.inputLabel}>Nome do alimento:</Text>
             <TextInput
               style={dynamicStyles.input}
               placeholder="Ex: Arroz."
               placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
-              value={newIngred.name}
-              onChangeText={(text) => setNewIngred({ ...newIngred, name: text })}
+              value={currentIngred?.name || ''}
+              onChangeText={(text) => setCurrentIngred({ ...currentIngred, name: text })}
             />
             <Text style={dynamicStyles.inputLabel}>Categoria:</Text>
             <TextInput
               style={dynamicStyles.input}
               placeholder="Ex: Grãos. "
               placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
-              value={newIngred.category}
-              onChangeText={(text) => setNewIngred({ ...newIngred, category: text })}
+              value={currentIngred?.category || ''}
+              onChangeText={(text) => setCurrentIngred({ ...currentIngred, name: text })}
             />
            
-           <TouchableOpacity style={dynamicStyles.Button} onPress={handleSaveRecipe}>
-             <Text style={dynamicStyles.ButtonText}>Salvar</Text>
+           <TouchableOpacity style={dynamicStyles.Button} onPress={handleSaveIngred}>
+             <Text style={dynamicStyles.ButtonText}>{currentIngred?.id ? 'Salvar Alterações' : 'Salvar'}
+
+             </Text>
              </TouchableOpacity>
         
-            <TouchableOpacity style={dynamicStyles.modalButton} onPress={handleCloseModal}>
+            <TouchableOpacity style={dynamicStyles.modalButton} 
+            onPress={handleCloseModal}>
               <Text style={dynamicStyles.modalButtonText}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-      
     </ParallaxScrollView>
   );
 
@@ -164,27 +199,32 @@ const createStyles = (isDarkMode: boolean) =>
       color: isDarkMode ? '#fff' : '#333',
       marginBottom: 8,
     },
+    
     ingredDetails: {
       marginTop: 12,
       marginBottom: 8,
     },
+    
     ingredSteps: {
       fontSize: 16,
       color: isDarkMode ? '#ccc' : '#333',
       lineHeight: 24,
     },
+    
     modalOverlay: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
+    
     modalContent: {
       width: '90%',
       padding: 20,
       backgroundColor: isDarkMode ? '#333' : '#fff',
       borderRadius: 8,
     },
+   
     inputLabel: {
       fontSize: 16,
       fontWeight: 'bold',
@@ -193,6 +233,7 @@ const createStyles = (isDarkMode: boolean) =>
       alignSelf: 'flex-start',
       marginLeft: 10,
     },
+    
     modalTitle: {
       fontSize: 20,
       fontWeight: 'bold',
@@ -202,32 +243,38 @@ const createStyles = (isDarkMode: boolean) =>
     textArea: {
       height: 100,
     },
+    
     modalButton: {
       marginTop: 10,
       padding: 10,
       backgroundColor: '#fff',
       borderRadius: 8,
     },
+    
     modalButtonText: {
       color: '#007BFF',
       textAlign: 'center',
     },
+
    Button: {
       marginTop: 10,
       padding: 10,
       backgroundColor: '#007BFF',
       borderRadius: 8,
     },
+    
    ButtonText: {
       color: '#fff',
       textAlign: 'center',
       fontSize: 17,
     },
+    
     formContainer: {
       width: '100%',
       maxWidth: 500,
       alignItems: 'center',
     },
+    
     title: {
       fontSize: 28,
       fontWeight: 'bold',
@@ -274,8 +321,36 @@ const createStyles = (isDarkMode: boolean) =>
         color: isDarkMode ? '#ccc' : '#666',
         marginBottom: 8,
       },
-     
+      
+      actionButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 16,
+      },
+      
+      editButton: {
+        backgroundColor: '#007BFF', // Azul para edição
+        padding: 10,
+        borderRadius: 8,
+        flex: 1,
+        marginRight: 8,
+      },
+      
+      deleteButton: {
+        backgroundColor: '#FF4C4C', // Vermelho para exclusão
+        padding: 10,
+        borderRadius: 8,
+        flex: 1,
+        marginLeft: 8,
+      },
+      
+      buttonText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: 'bold',
+      },
     
     
   });
-  
+

@@ -17,11 +17,13 @@ import { ThemedView } from '@/components/ThemedView';
 export default function ExploreScreen() {
   const [recipes, setRecipes] = useState([
     {
+      id: 1,
       name: 'Pizza Marguerita',
       ingredients: 'Farinha, água, fermento, sal, molho de tomate, mussarela e manjericão.',
       steps: 'Misture farinha, água, fermento e sal para a massa. Adicione molho de tomate, mussarela e manjericão. Asse em forno quente por 10 minutos.',
     },
     {
+      id: 2,
       name: 'Sushi',
       ingredients: 'Arroz para sushi, vinagre, algas, peixes frescos e pepino.',
       steps: 'Prepare arroz para sushi e adicione vinagre. Enrole com algas, peixes frescos e vegetais de sua escolha.',
@@ -29,7 +31,7 @@ export default function ExploreScreen() {
   ]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [newRecipe, setNewRecipe] = useState({ name: '', ingredients: '', steps: '' });
+  const [currentRecipe, setCurrentRecipe] = useState<any>(null);
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
 
@@ -37,22 +39,36 @@ export default function ExploreScreen() {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (recipe?: any) => {
+    setCurrentRecipe(recipe || { id: null, name: '', ingredients: '', steps: '' });
     setModalVisible(true);
   };
 
   const handleCloseModal = () => {
     setModalVisible(false);
-    setNewRecipe({ name: '', ingredients: '', steps: '' });
+    setCurrentRecipe(null);
   };
 
   const handleSaveRecipe = () => {
-    if (newRecipe.name && newRecipe.ingredients && newRecipe.steps) {
-      setRecipes([...recipes, newRecipe]);
+    if (currentRecipe.name && currentRecipe.ingredients && currentRecipe.steps) {
+      if (currentRecipe.id) {
+        setRecipes((prevRecipes) =>
+          prevRecipes.map((recipe) =>
+            recipe.id === currentRecipe.id ? currentRecipe : recipe
+          )
+        );
+      } else {
+        const newRecipe = { ...currentRecipe, id: Date.now() };
+        setRecipes([...recipes, newRecipe]);
+      }
       handleCloseModal();
     } else {
       alert('Preencha todos os campos.');
     }
+  };
+
+  const handleDeleteRecipe = (id: number) => {
+    setRecipes(recipes.filter((recipe) => recipe.id !== id));
   };
 
   const dynamicStyles = createStyles(isDarkMode);
@@ -70,15 +86,14 @@ export default function ExploreScreen() {
       <ThemedView style={dynamicStyles.titleContainer}>
         <ThemedText type="title">Suas Receitas</ThemedText>
 
-        <TouchableOpacity style={dynamicStyles.addButton} onPress={handleOpenModal}>
+        <TouchableOpacity style={dynamicStyles.addButton} onPress={() => handleOpenModal()}>
           <Text style={dynamicStyles.addButtonText}>+ Adicionar Receita</Text>
         </TouchableOpacity>
-       
       </ThemedView>
 
       <ScrollView style={dynamicStyles.recipeList}>
         {recipes.map((recipe, index) => (
-          <ThemedView key={index} style={dynamicStyles.recipeCard}>
+          <ThemedView key={recipe.id} style={dynamicStyles.recipeCard}>
             <TouchableOpacity onPress={() => toggleRecipeDetails(index)}>
               <ThemedText style={dynamicStyles.recipeName}>{recipe.name}</ThemedText>
             </TouchableOpacity>
@@ -91,32 +106,50 @@ export default function ExploreScreen() {
                 <ThemedText style={dynamicStyles.recipeSteps}>
                   Como fazer: {recipe.steps}
                 </ThemedText>
+                <View style={dynamicStyles.actionButtons}>
+                  <TouchableOpacity
+                    style={dynamicStyles.editButton}
+                    onPress={() => handleOpenModal(recipe)}
+                  >
+                    <Text style={dynamicStyles.buttonText}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={dynamicStyles.deleteButton}
+                    onPress={() => handleDeleteRecipe(recipe.id)}
+                  >
+                    <Text style={dynamicStyles.buttonText}>Deletar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </ThemedView>
         ))}
       </ScrollView>
 
-      {/* Modal de Adição de Receita */}
+      {/* Modal de Adição/Edição de Receita */}
       <Modal visible={modalVisible} transparent={true} animationType="slide">
         <View style={dynamicStyles.modalOverlay}>
           <View style={dynamicStyles.modalContent}>
-            <Text style={dynamicStyles.modalTitle}>Adicionar Receita</Text>
+            <Text style={dynamicStyles.modalTitle}>
+              {currentRecipe?.id ? 'Editar Receita' : 'Adicionar Receita'}
+            </Text>
             <Text style={dynamicStyles.inputLabel}>Nome da Receita:</Text>
             <TextInput
               style={dynamicStyles.input}
               placeholder="Ex: Pizza Marguerita"
               placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
-              value={newRecipe.name}
-              onChangeText={(text) => setNewRecipe({ ...newRecipe, name: text })}
+              value={currentRecipe?.name || ''}
+              onChangeText={(text) => setCurrentRecipe({ ...currentRecipe, name: text })}
             />
             <Text style={dynamicStyles.inputLabel}>Ingredientes:</Text>
             <TextInput
               style={dynamicStyles.input}
               placeholder="Ex: Farinha, molho de tomate, queijo..."
               placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
-              value={newRecipe.ingredients}
-              onChangeText={(text) => setNewRecipe({ ...newRecipe, ingredients: text })}
+              value={currentRecipe?.ingredients || ''}
+              onChangeText={(text) =>
+                setCurrentRecipe({ ...currentRecipe, ingredients: text })
+              }
             />
             <Text style={dynamicStyles.inputLabel}>Passo a Passo:</Text>
             <TextInput
@@ -124,24 +157,26 @@ export default function ExploreScreen() {
               placeholder="Ex: Misture todos os ingredientes..."
               placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
               multiline
-              value={newRecipe.steps}
-              onChangeText={(text) => setNewRecipe({ ...newRecipe, steps: text })}
+              value={currentRecipe?.steps || ''}
+              onChangeText={(text) => setCurrentRecipe({ ...currentRecipe, steps: text })}
             />
-           <TouchableOpacity style={dynamicStyles.Button} onPress={handleSaveRecipe}>
-             <Text style={dynamicStyles.ButtonText}>Salvar</Text>
-             </TouchableOpacity>
-        
-            <TouchableOpacity style={dynamicStyles.modalButton} onPress={handleCloseModal}>
+            <TouchableOpacity style={dynamicStyles.Button} onPress={handleSaveRecipe}>
+              <Text style={dynamicStyles.ButtonText}>
+                {currentRecipe?.id ? 'Salvar Alterações' : 'Salvar'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={dynamicStyles.modalButton}
+              onPress={handleCloseModal}
+            >
               <Text style={dynamicStyles.modalButtonText}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-      
     </ParallaxScrollView>
   );
-
-  
 }
 
 
@@ -287,7 +322,31 @@ const createStyles = (isDarkMode: boolean) =>
         color: isDarkMode ? '#ccc' : '#666',
         marginBottom: 8,
       },
-     
+      actionButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 16,
+      },
+      editButton: {
+        backgroundColor: '#007BFF', // Azul para edição
+        padding: 10,
+        borderRadius: 8,
+        flex: 1,
+        marginRight: 8,
+      },
+      deleteButton: {
+        backgroundColor: '#FF4C4C', // Vermelho para exclusão
+        padding: 10,
+        borderRadius: 8,
+        flex: 1,
+        marginLeft: 8,
+      },
+      buttonText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: 'bold',
+      },
     
     
   });
