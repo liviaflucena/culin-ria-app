@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import {
   StyleSheet,
   ScrollView,
@@ -10,30 +11,60 @@ import {
   TextInput,
   useColorScheme,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
 export default function ExploreScreen() {
-  const [recipes, setRecipes] = useState([
-    {
-      id: 1,
-      name: 'Pizza Marguerita',
-      ingredients: 'Farinha, água, fermento, sal, molho de tomate, mussarela e manjericão.',
-      steps: 'Misture farinha, água, fermento e sal para a massa. Adicione molho de tomate, mussarela e manjericão. Asse em forno quente por 10 minutos.',
-    },
-    {
-      id: 2,
-      name: 'Sushi',
-      ingredients: 'Arroz para sushi, vinagre, algas, peixes frescos e pepino.',
-      steps: 'Prepare arroz para sushi e adicione vinagre. Enrole com algas, peixes frescos e vegetais de sua escolha.',
-    },
-  ]);
+  const [recipes, setRecipes] = useState<any[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentRecipe, setCurrentRecipe] = useState<any>(null);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
+
+  // carrega as receitas do AsyncStorage
+  const loadRecipes = async () => {
+    try {
+      const storedRecipes = await AsyncStorage.getItem('@RecipesApp:recipes');
+      if (storedRecipes) {
+        setRecipes(JSON.parse(storedRecipes));
+      }
+    } catch (error) {
+      console.error('Error loading recipes from AsyncStorage', error);
+    }
+  };
+
+  // função para salvar as receitas no AsyncStorage
+  const saveRecipes = async (recipes: any[]) => {
+    try {
+      await AsyncStorage.setItem('@RecipesApp:recipes', JSON.stringify(recipes));
+    } catch (error) {
+      console.error('Error saving recipes to AsyncStorage', error);
+    }
+  };
+
+  // atualiza localização
+  const getLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setErrorMsg('Permission to access location was denied');
+      return;
+    }
+
+    let location = await Location.getCurrentPositionAsync({});
+    setLocation(location);
+  };
+
+  useEffect(() => {
+    loadRecipes(); // carrega as receitas do AsyncStorage
+    getLocation(); // atualiza a localização
+  }, []);
 
   const toggleRecipeDetails = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
@@ -61,6 +92,7 @@ export default function ExploreScreen() {
         const newRecipe = { ...currentRecipe, id: Date.now() };
         setRecipes([...recipes, newRecipe]);
       }
+      saveRecipes(recipes); // salva no AsyncStorage
       handleCloseModal();
     } else {
       alert('Preencha todos os campos.');
@@ -68,7 +100,9 @@ export default function ExploreScreen() {
   };
 
   const handleDeleteRecipe = (id: number) => {
-    setRecipes(recipes.filter((recipe) => recipe.id !== id));
+    const updatedRecipes = recipes.filter((recipe) => recipe.id !== id);
+    setRecipes(updatedRecipes);
+    saveRecipes(updatedRecipes); // atualiza no AsyncStorage
   };
 
   const dynamicStyles = createStyles(isDarkMode);
@@ -205,7 +239,6 @@ const createStyles = (isDarkMode: boolean) =>
     recipeList: {
       paddingHorizontal: 16,
     },
-    
     recipeName: {
       fontSize: 20,
       fontWeight: 'bold',
@@ -246,7 +279,6 @@ const createStyles = (isDarkMode: boolean) =>
       fontWeight: 'bold',
       marginBottom: 15,
     },
-    
     textArea: {
       height: 100,
     },
@@ -260,13 +292,13 @@ const createStyles = (isDarkMode: boolean) =>
       color: '#007BFF',
       textAlign: 'center',
     },
-   Button: {
+    Button: {
       marginTop: 10,
       padding: 10,
       backgroundColor: '#007BFF',
       borderRadius: 8,
     },
-   ButtonText: {
+    ButtonText: {
       color: '#fff',
       textAlign: 'center',
       fontSize: 17,
@@ -283,7 +315,6 @@ const createStyles = (isDarkMode: boolean) =>
       marginBottom: 20,
       textAlign: 'center',
     },
-    
     input: {
       height: 45,
       width: '100%',
@@ -296,58 +327,51 @@ const createStyles = (isDarkMode: boolean) =>
       backgroundColor: isDarkMode ? '#1E1E1E' : '#f9f9f9',
       color: isDarkMode ? '#fff' : '#000',
     },
-    
-    
     modalMessage: {
       fontSize: 16,
       marginBottom: 20,
       textAlign: 'center',
       color: isDarkMode ? '#ccc' : '#333',
     },
-    
-      recipeCard: {
-        backgroundColor: isDarkMode ? '#1E1E1E' : '#fff',
-        padding: 16,
-        borderRadius: 12,
-        marginBottom: 20,
-        shadowColor: isDarkMode ? '#000' : '#000',
-        shadowOpacity: 0.1,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 4,
-        elevation: 3,
-      },
-   
-      recipeOrigin: {
-        fontSize: 16,
-        color: isDarkMode ? '#ccc' : '#666',
-        marginBottom: 8,
-      },
-      actionButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 16,
-      },
-      editButton: {
-        backgroundColor: '#007BFF', // Azul para edição
-        padding: 10,
-        borderRadius: 8,
-        flex: 1,
-        marginRight: 8,
-      },
-      deleteButton: {
-        backgroundColor: '#FF4C4C', // Vermelho para exclusão
-        padding: 10,
-        borderRadius: 8,
-        flex: 1,
-        marginLeft: 8,
-      },
-      buttonText: {
-        color: '#fff',
-        textAlign: 'center',
-        fontSize: 16,
-        fontWeight: 'bold',
-      },
-    
-    
+    recipeCard: {
+      backgroundColor: isDarkMode ? '#1E1E1E' : '#fff',
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 20,
+      shadowColor: isDarkMode ? '#000' : '#000',
+      shadowOpacity: 0.1,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    recipeOrigin: {
+      fontSize: 16,
+      color: isDarkMode ? '#ccc' : '#666',
+      marginBottom: 8,
+    },
+    actionButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 16,
+    },
+    editButton: {
+      backgroundColor: '#007BFF', // Azul para edição
+      padding: 10,
+      borderRadius: 8,
+      flex: 1,
+      marginRight: 8,
+    },
+    deleteButton: {
+      backgroundColor: '#FF4C4C', // Vermelho para exclusão
+      padding: 10,
+      borderRadius: 8,
+      flex: 1,
+      marginLeft: 8,
+    },
+    buttonText: {
+      color: '#fff',
+      textAlign: 'center',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
   });
-  

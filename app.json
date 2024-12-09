@@ -9,8 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.seuprojeto.culinariaapp",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Precisamos acessar sua localização para melhorar a experiência"
+      }
     },
+    
+    
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",

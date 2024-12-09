@@ -1,15 +1,42 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Platform, Text, View } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import * as Location from 'expo-location';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const [locationPermission, setLocationPermission] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status === 'granted');
+    })();
+  }, []);
+
+  // Exibe uma tela de carregamento enquanto aguarda a resposta da permissão
+  if (locationPermission === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Carregando permissões...</Text>
+      </View>
+    );
+  }
+
+  // Caso a permissão não seja concedida, avisa ao usuário
+  if (locationPermission === false) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Sem acesso à localização! Habilite as permissões no seu dispositivo.</Text>
+      </View>
+    );
+  }
 
   return (
     <Tabs
@@ -25,7 +52,8 @@ export default function TabLayout() {
           },
           default: {},
         }),
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -40,7 +68,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
         }}
       />
-       <Tabs.Screen
+      <Tabs.Screen
         name="ingredientes"
         options={{
           title: 'Ingredientes',
@@ -48,7 +76,5 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-    
-    
   );
 }
