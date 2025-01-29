@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-
 import {
   StyleSheet,
   ScrollView,
@@ -16,6 +15,7 @@ import * as Location from 'expo-location';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { router } from 'expo-router';
 
 export default function ExploreScreen() {
   const [recipes, setRecipes] = useState<any[]>([]);
@@ -28,7 +28,7 @@ export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
 
-  // carrega as receitas do AsyncStorage
+  // Carrega as receitas do AsyncStorage
   const loadRecipes = async () => {
     try {
       const storedRecipes = await AsyncStorage.getItem('@RecipesApp:recipes');
@@ -40,7 +40,7 @@ export default function ExploreScreen() {
     }
   };
 
-  // função para salvar as receitas no AsyncStorage
+  // Salva as receitas no AsyncStorage
   const saveRecipes = async (recipes: any[]) => {
     try {
       await AsyncStorage.setItem('@RecipesApp:recipes', JSON.stringify(recipes));
@@ -49,7 +49,7 @@ export default function ExploreScreen() {
     }
   };
 
-  // atualiza localização
+  // Atualiza a localização
   const getLocation = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
@@ -62,47 +62,45 @@ export default function ExploreScreen() {
   };
 
   useEffect(() => {
-    loadRecipes(); // carrega as receitas do AsyncStorage
-    getLocation(); // atualiza a localização
+    loadRecipes(); // Carrega as receitas ao abrir a tela
+    getLocation(); // Atualiza a localização
   }, []);
 
-  const toggleRecipeDetails = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
+  // Navega para a tela de Ingredientes
+  const navigateToIngredientes = (recipe: any) => {
+    router.push({ pathname: '/ingredientes', params: { id: recipe.id } });
   };
 
+  // Abre o modal para adicionar/editar receita
   const handleOpenModal = (recipe?: any) => {
     setCurrentRecipe(recipe || { id: null, name: '', ingredients: '', steps: '' });
     setModalVisible(true);
   };
 
+  // Fecha o modal
   const handleCloseModal = () => {
     setModalVisible(false);
     setCurrentRecipe(null);
   };
 
+  // Salva a receita
   const handleSaveRecipe = () => {
     if (currentRecipe.name && currentRecipe.ingredients && currentRecipe.steps) {
+      let updatedRecipes;
       if (currentRecipe.id) {
-        setRecipes((prevRecipes) =>
-          prevRecipes.map((recipe) =>
-            recipe.id === currentRecipe.id ? currentRecipe : recipe
-          )
+        updatedRecipes = recipes.map((recipe) =>
+          recipe.id === currentRecipe.id ? currentRecipe : recipe
         );
       } else {
         const newRecipe = { ...currentRecipe, id: Date.now() };
-        setRecipes([...recipes, newRecipe]);
+        updatedRecipes = [...recipes, newRecipe];
       }
-      saveRecipes(recipes); // salva no AsyncStorage
+      setRecipes(updatedRecipes);
+      saveRecipes(updatedRecipes); // Salva no AsyncStorage
       handleCloseModal();
     } else {
       alert('Preencha todos os campos.');
     }
-  };
-
-  const handleDeleteRecipe = (id: number) => {
-    const updatedRecipes = recipes.filter((recipe) => recipe.id !== id);
-    setRecipes(updatedRecipes);
-    saveRecipes(updatedRecipes); // atualiza no AsyncStorage
   };
 
   const dynamicStyles = createStyles(isDarkMode);
@@ -128,7 +126,7 @@ export default function ExploreScreen() {
       <ScrollView style={dynamicStyles.recipeList}>
         {recipes.map((recipe, index) => (
           <ThemedView key={recipe.id} style={dynamicStyles.recipeCard}>
-            <TouchableOpacity onPress={() => toggleRecipeDetails(index)}>
+            <TouchableOpacity onPress={() => navigateToIngredientes(recipe)}>
               <ThemedText style={dynamicStyles.recipeName}>{recipe.name}</ThemedText>
             </TouchableOpacity>
 
@@ -140,20 +138,6 @@ export default function ExploreScreen() {
                 <ThemedText style={dynamicStyles.recipeSteps}>
                   Como fazer: {recipe.steps}
                 </ThemedText>
-                <View style={dynamicStyles.actionButtons}>
-                  <TouchableOpacity
-                    style={dynamicStyles.editButton}
-                    onPress={() => handleOpenModal(recipe)}
-                  >
-                    <Text style={dynamicStyles.buttonText}>Editar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={dynamicStyles.deleteButton}
-                    onPress={() => handleDeleteRecipe(recipe.id)}
-                  >
-                    <Text style={dynamicStyles.buttonText}>Deletar</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             )}
           </ThemedView>
@@ -212,7 +196,6 @@ export default function ExploreScreen() {
     </ParallaxScrollView>
   );
 }
-
 
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({

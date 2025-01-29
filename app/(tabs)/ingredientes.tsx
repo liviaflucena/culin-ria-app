@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-
 import {
   StyleSheet,
   ScrollView,
@@ -12,94 +11,98 @@ import {
   useColorScheme,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
+import { router, useLocalSearchParams } from 'expo-router'; // Import do router e useLocalSearchParams
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
 export default function IngredientesScreen() {
-  const [ingred, setIngred] = useState<any[]>([]);
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const { id } = useLocalSearchParams(); // Recebe o ID da receita da tela anterior
+  const [recipe, setRecipe] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [currentIngred, setCurrentIngred] = useState<any>(null);
-  const [location, setLocation] = useState<any>(null); // para armazenar localização
+  const [currentRecipe, setCurrentRecipe] = useState<any>(null);
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
 
-  // função para carregar ingredientes do AsyncStorage
-  const loadIngred = async () => {
+  // Carrega a receita do AsyncStorage com base no ID
+  const loadRecipe = async () => {
     try {
-      const savedIngred = await AsyncStorage.getItem('ingredientes');
-      if (savedIngred) {
-        setIngred(JSON.parse(savedIngred));
+      const storedRecipes = await AsyncStorage.getItem('@RecipesApp:recipes');
+      if (storedRecipes) {
+        const recipes = JSON.parse(storedRecipes);
+        const selectedRecipe = recipes.find((r: any) => r.id === Number(id));
+        if (selectedRecipe) {
+          setRecipe(selectedRecipe);
+          setCurrentRecipe(selectedRecipe); // Define a receita atual para edição
+        }
       }
     } catch (error) {
-      console.error('Erro ao carregar ingredientes:', error);
+      console.error('Erro ao carregar a receita:', error);
     }
   };
 
-  // função para salvar ingredientes no AsyncStorage
-  const saveIngred = async (newIngred: any) => {
+  // Salva a receita atualizada no AsyncStorage
+  const saveRecipe = async (updatedRecipe: any) => {
     try {
-      await AsyncStorage.setItem('ingredientes', JSON.stringify(newIngred));
+      const storedRecipes = await AsyncStorage.getItem('@RecipesApp:recipes');
+      if (storedRecipes) {
+        const recipes = JSON.parse(storedRecipes);
+        const updatedRecipes = recipes.map((r: any) =>
+          r.id === updatedRecipe.id ? updatedRecipe : r
+        );
+        await AsyncStorage.setItem('@RecipesApp:recipes', JSON.stringify(updatedRecipes));
+        setRecipe(updatedRecipe); // Atualiza o estado local
+        alert('Receita salva com sucesso!');
+      }
     } catch (error) {
-      console.error('Erro ao salvar ingredientes:', error);
+      console.error('Erro ao salvar a receita:', error);
     }
   };
 
-  // função para obter localização do usuário
-  const getLocation = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status === 'granted') {
-      const locationData = await Location.getCurrentPositionAsync({});
-      setLocation(locationData);
+  // Exclui a receita
+  const deleteRecipe = async () => {
+    try {
+      const storedRecipes = await AsyncStorage.getItem('@RecipesApp:recipes');
+      if (storedRecipes) {
+        const recipes = JSON.parse(storedRecipes);
+        const updatedRecipes = recipes.filter((r: any) => r.id !== Number(id));
+        await AsyncStorage.setItem('@RecipesApp:recipes', JSON.stringify(updatedRecipes));
+        alert('Receita excluída com sucesso!');
+        router.replace({ pathname: '/explore'}) // Volta para a tela anterior após excluir
+      }
+    } catch (error) {
+      console.error('Erro ao excluir a receita:', error);
     }
   };
 
-  // carregar ingredientes e localização ao montar o componente
-  useEffect(() => {
-    loadIngred();
-    getLocation();
-  }, []);
-
-  const toggleIngredDetails = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
-
-  const handleOpenModal = (ingred?: any) => {
-    setCurrentIngred(ingred || { id: null, name: '', category: '' });
+  // Abre o modal para editar a receita
+  const handleOpenModal = () => {
     setModalVisible(true);
   };
 
+  // Fecha o modal
   const handleCloseModal = () => {
     setModalVisible(false);
-    setCurrentIngred(null);
   };
 
-  const handleSaveIngred = () => {
-    if (currentIngred.name && currentIngred.category) {
-      let newIngredList;
-      if (currentIngred.id) {
-        newIngredList = ingred.map((item) =>
-          item.id === currentIngred.id ? currentIngred : item
-        );
-      } else {
-        const newIngred = { ...currentIngred, id: Date.now() };
-        newIngredList = [...ingred, newIngred];
-      }
-      setIngred(newIngredList);
-      saveIngred(newIngredList); // salvar no AsyncStorage
+  // Salva as alterações da receita
+  const handleSaveRecipe = () => {
+    if (currentRecipe.name && currentRecipe.ingredients && currentRecipe.steps) {
+      saveRecipe(currentRecipe); // Salva no AsyncStorage
       handleCloseModal();
     } else {
       alert('Preencha todos os campos.');
     }
   };
 
-  const handleDeleteIngred = (id: number) => {
-    const updatedIngred = ingred.filter((ingred) => ingred.id !== id);
-    setIngred(updatedIngred);
-    saveIngred(updatedIngred); // atualizar no AsyncStorage
+  // Volta para a tela anterior
+  const handleGoBack = () => {
+    router.replace({ pathname: '/explore'});
   };
+
+  useEffect(() => {
+    loadRecipe(); // Carrega a receita ao abrir a tela
+  }, [id]);
 
   const dynamicStyles = createStyles(isDarkMode);
 
@@ -114,76 +117,91 @@ export default function IngredientesScreen() {
       }
     >
       <ThemedView style={dynamicStyles.titleContainer}>
-        <ThemedText type="title">Seus Ingredientes</ThemedText>
+        <ThemedText type="title">Editar Receita</ThemedText>
 
-        <TouchableOpacity style={dynamicStyles.addButton} onPress={() => handleOpenModal()}>
-          <Text style={dynamicStyles.addButtonText}>+ Adicionar alimentos</Text>
-        </TouchableOpacity>
+        
       </ThemedView>
 
-      <ScrollView style={dynamicStyles.ingredList}>
-        {ingred.map((ingred, index) => (
-          <ThemedView key={index} style={dynamicStyles.ingredCard}>
-            <TouchableOpacity onPress={() => toggleIngredDetails(index)}>
-              <ThemedText style={dynamicStyles.ingredName}>{ingred.name}</ThemedText>
+      {recipe && (
+        <ScrollView style={dynamicStyles.recipeDetails}>
+          <ThemedText style={dynamicStyles.recipeName}>{recipe.name}</ThemedText>
+          <ThemedText style={dynamicStyles.recipeSteps}>
+            Ingredientes: {recipe.ingredients}
+          </ThemedText>
+          <ThemedText style={dynamicStyles.recipeSteps}>
+            Como fazer: {recipe.steps}
+          </ThemedText>
+
+          <View style={dynamicStyles.actionButtons}>
+            <TouchableOpacity
+              style={dynamicStyles.editButton}
+              onPress={handleOpenModal}
+            >
+              <Text style={dynamicStyles.buttonText}>Editar</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={dynamicStyles.deleteButton}
+              onPress={deleteRecipe}
+            >
+              <Text style={dynamicStyles.buttonText}>Deletar</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Botão Voltar */}
+        <TouchableOpacity
+          style={dynamicStyles.backButton}
+          onPress={handleGoBack}
+        >
+          <Text style={dynamicStyles.backButtonText}>Voltar</Text>
+        </TouchableOpacity>
+        </ScrollView>
+      )}
 
-            {expandedIndex === index && (
-              <View style={dynamicStyles.ingredDetails}>
-                <ThemedText style={dynamicStyles.ingredSteps}>
-                  Categoria: {ingred.category}
-                </ThemedText>
-                <View style={dynamicStyles.actionButtons}>
-                  <TouchableOpacity
-                    style={dynamicStyles.editButton}
-                    onPress={() => handleOpenModal(ingred)}
-                  >
-                    <Text style={dynamicStyles.buttonText}>Editar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={dynamicStyles.deleteButton}
-                    onPress={() => handleDeleteIngred(ingred.id)}
-                  >
-                    <Text style={dynamicStyles.buttonText}>Deletar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </ThemedView>
-        ))}
-      </ScrollView>
-
-      {/* Modal de Adição de Receita */}
+      {/* Modal de Edição de Receita */}
       <Modal visible={modalVisible} transparent={true} animationType="slide">
         <View style={dynamicStyles.modalOverlay}>
           <View style={dynamicStyles.modalContent}>
-            <Text style={dynamicStyles.modalTitle}>
-              {currentIngred?.id ? 'Editar Ingrediente' : 'Adicionar Ingrediente'}
-            </Text>
-            <Text style={dynamicStyles.inputLabel}>Nome do alimento:</Text>
+            <Text style={dynamicStyles.modalTitle}>Editar Receita</Text>
+            <Text style={dynamicStyles.inputLabel}>Nome da Receita:</Text>
             <TextInput
               style={dynamicStyles.input}
-              placeholder="Ex: Arroz."
+              placeholder="Ex: Pizza Marguerita"
               placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
-              value={currentIngred?.name || ''}
-              onChangeText={(text) => setCurrentIngred({ ...currentIngred, name: text })}
+              value={currentRecipe?.name || ''}
+              onChangeText={(text) =>
+                setCurrentRecipe({ ...currentRecipe, name: text })
+              }
             />
-            <Text style={dynamicStyles.inputLabel}>Categoria:</Text>
+            <Text style={dynamicStyles.inputLabel}>Ingredientes:</Text>
             <TextInput
               style={dynamicStyles.input}
-              placeholder="Ex: Grãos."
+              placeholder="Ex: Farinha, molho de tomate, queijo..."
               placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
-              value={currentIngred?.category || ''}
-              onChangeText={(text) => setCurrentIngred({ ...currentIngred, category: text })}
+              value={currentRecipe?.ingredients || ''}
+              onChangeText={(text) =>
+                setCurrentRecipe({ ...currentRecipe, ingredients: text })
+              }
             />
-
-            <TouchableOpacity style={dynamicStyles.Button} onPress={handleSaveIngred}>
-              <Text style={dynamicStyles.ButtonText}>
-                {currentIngred?.id ? 'Salvar Alterações' : 'Salvar'}
-              </Text>
+            <Text style={dynamicStyles.inputLabel}>Passo a Passo:</Text>
+            <TextInput
+              style={[dynamicStyles.input, dynamicStyles.textArea]}
+              placeholder="Ex: Misture todos os ingredientes..."
+              placeholderTextColor={isDarkMode ? '#ccc' : '#999'}
+              multiline
+              value={currentRecipe?.steps || ''}
+              onChangeText={(text) =>
+                setCurrentRecipe({ ...currentRecipe, steps: text })
+              }
+            />
+            <TouchableOpacity
+              style={dynamicStyles.Button}
+              onPress={handleSaveRecipe}
+            >
+              <Text style={dynamicStyles.ButtonText}>Salvar Alterações</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={dynamicStyles.modalButton} onPress={handleCloseModal}>
+            <TouchableOpacity
+              style={dynamicStyles.modalButton}
+              onPress={handleCloseModal}
+            >
               <Text style={dynamicStyles.modalButtonText}>Fechar</Text>
             </TouchableOpacity>
           </View>
@@ -192,6 +210,7 @@ export default function IngredientesScreen() {
     </ParallaxScrollView>
   );
 }
+
 
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({
@@ -353,4 +372,30 @@ const createStyles = (isDarkMode: boolean) =>
       fontSize: 16,
       fontWeight: 'bold',
     },
+    backButton: {
+      marginTop: 10,
+      padding: 10,
+      backgroundColor: isDarkMode ? '#555' : '#ddd',
+      borderRadius: 5,
+      alignItems: 'center',
+    },
+    backButtonText: {
+      color: isDarkMode ? '#fff' : '#000',
+      fontSize: 16,
+    },
+    recipeName: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: isDarkMode ? '#fff' : '#333',
+      marginBottom: 8,
+    },
+    recipeDetails: {
+      marginTop: 12,
+      marginBottom: 8,
+    },
+    recipeSteps: {
+      fontSize: 16,
+      color: isDarkMode ? '#ccc' : '#333',
+      lineHeight: 24,
+    }
   });
